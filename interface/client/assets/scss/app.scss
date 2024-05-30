@@ -100,13 +100,15 @@ html, body {
   border-radius: 5px;
   vertical-align: top;
   margin: 2px;
-  oberflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-x: auto;
+}
 
-  .chartcontainer {
-    height: 90%;
-    width: 100%;
-  }
+.chartcontainer {
+  display: block;
+  position: relative;
+  width: max-content;  /* Allow the container to grow based on content */
+  height: max-content; /* Allow the container to grow based on content */
 }
 
 
