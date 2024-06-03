@@ -916,3 +916,8 @@
 ['origin_state', 'wildlife_size', 'none'] 2024-06-02 16:09:54.013277
 ['cost_other', 'aircraft_airline_operator', 'origin_state'] 2024-06-02 16:11:00.891594
 ['speed_ias_in_knots', 'origin_state', 'aircraft_make_model'] 2024-06-02 16:11:05.195510
+['speed_ias_in_knots', 'origin_state', 'aircraft_make_model'] 2024-06-02 16:41:01.843471
+['speed_ias_in_knots', 'origin_state', 'when_time_of_day'] 2024-06-02 16:41:51.430030
+['cost_total_a', 'when_time_of_day', 'airport_name'] 2024-06-02 16:41:56.184098
+['cost_repair', 'when_time_of_day', 'cost_other'] 2024-06-02 16:43:38.124886
+['speed_ias_in_knots', 'origin_state', 'aircraft_make_model'] 2024-06-02 16:43:42.341568

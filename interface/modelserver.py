@@ -11,6 +11,7 @@ from performance import OnlineLearningSystem
 import concurrent.futures
 import pickle
 import os
+import pdb 
 
 port = 5500
 MAX_LEN = 20
@@ -140,7 +141,17 @@ def top_k(save_csv=False):
 
         for future, attributes in future_to_attributes:
             chart_recom = future.result()
-            chart_recom_list.append(chart_recom)
+            for x in chart_recom:
+                spec = json.loads(x)
+                # Ensure the 'encoding' and 'axis' dictionaries exist if not already present.
+                spec.setdefault('encoding', {}).setdefault('x', {}).setdefault('axis', {})
+                spec.setdefault('encoding', {}).setdefault('y', {}).setdefault('axis', {})
+
+                # Add the labelAngle properties to the x and y axes.
+                spec['encoding']['x']['axis']['labelAngle'] = -90
+                spec['encoding']['y']['axis']['labelAngle'] = 0
+                
+                chart_recom_list.append([json.dumps(spec)])  # Append the modified spec back to the list
 
     baseline_chart_recom = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
