@@ -9,8 +9,12 @@
  *************************************************************************/
 
 import EventEmitter from "events"
-import {storeInteractionLogs} from "./utils";
+import {storeInteractionLogs} from "./StoreLogs.js";
 var logging = true
+
+import { scaleOrdinal } from 'd3-scale';
+import { schemeGreys } from 'd3-scale-chromatic'; 
+
 export default class SumView extends EventEmitter {
     constructor(container, data, conf) {
         super()
@@ -29,16 +33,15 @@ export default class SumView extends EventEmitter {
             ngbrN: 6
         }
         this._charts = []
-        this._allRecommendedcharts = []
         this._baselinecharts = []
         this._prevcharts = []
         this._selectedChartID = -1
         this._selectedbookmarkedChartID = -1
         this._performanceData = {}
         
-        this._varclr = d3.scaleOrdinal(['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075'])
-        this._varclr = d3.scaleOrdinal(['#F3C300', '#875692', '#F38400', '#A1CAF1', '#BE0032', '#C2B280', '#848482', '#008856', '#E68FAC', '#0067A5', '#F99379', '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600', '#654522', '#E25822', '#2B3D26'])
-        this._usrclr = d3.scaleOrdinal(d3.schemeGreys[5]).domain([0, 1, 2, 3, 4])
+        this._varclr = scaleOrdinal(['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075'])
+        this._varclr = scaleOrdinal(['#F3C300', '#875692', '#F38400', '#A1CAF1', '#BE0032', '#C2B280', '#848482', '#008856', '#E68FAC', '#0067A5', '#F99379', '#604E97', '#F6A600', '#B3446C', '#DCD300', '#882D17', '#8DB600', '#654522', '#E25822', '#2B3D26'])
+        this._usrclr = scaleOrdinal(schemeGreys[5]).domain([0, 1, 2, 3, 4])
         this._bookmarkedCharts = []
 
         this._algorithm= 'ActorCritic'
@@ -59,14 +62,9 @@ export default class SumView extends EventEmitter {
         return this._bookmarkedCharts
     }
 
-     get allrecommendedCharts() {
-        return this._allRecommendedcharts
-    }
-
     get selectedChartID() {
         return this._selectedChartID
     }
-
 
      set bookmarkedselectedChartID(ch) {
         this._svgDrawing.selectAll('.chartdot.selected')
@@ -123,34 +121,6 @@ export default class SumView extends EventEmitter {
             .attr('class', 'cursorc')
             .attr('r', this.conf.size[0] * this._params.recradius)
             .style('visibility', 'hidden')
-        this._svgDrawing.append('rect')
-            .attr('class', 'background')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('width', this.conf.size[0])
-            .attr('height', this.conf.size[1])
-            .on('click', () => {
-                if (!this.conf.norecommend && this._charts.length >= 3) {
-                    var p = d3.mouse(this._svgDrawing.node())
-                    this._charts = _.filter(this._charts, (c) => {
-                        return !c.created
-                    })
-                    // this.render()
-                    this._recommendCharts()
-                } else {
-                    // alert('You need to create at least 3 charts.')
-                }
-            })
-            .on('mouseover', () => {
-                this._svgDrawing.select('.cursorc').style('visibility', 'visible')
-            })
-            .on('mouseout', () => {
-                this._svgDrawing.select('.cursorc').style('visibility', 'hidden')
-            })
-            .on('mousemove', () => {
-                var p = d3.mouse(this._svgDrawing.node())
-                this._svgDrawing.select('.cursorc').attr('cx', p[0]).attr('cy', p[1])
-            })
         this._svgDrawing.append('g')
             .attr('class', 'chartlayer')
     }
@@ -158,10 +128,7 @@ export default class SumView extends EventEmitter {
     update(callback, attributesHistory = null) {
         this._prevcharts = this._charts
 
-        this._recommendCharts(attributesHistory)
-        this._collectAllRecommendedCharts()
-        // this.render()
-        // if (callback) callback()
+        this._recommendCharts(attributesHistory)       
 
     }
 
@@ -183,18 +150,6 @@ export default class SumView extends EventEmitter {
             }
         }
     }
-
-// collect all recommended charts
-_collectAllRecommendedCharts() {
-    for (var i = 0; i < this._charts.length; i++) {
-        if (this._charts[i]) {
-            //change the chart id to the next available id without changing original id
-            this._charts[i].overallchid = this._allRecommendedcharts.length;
-            this._allRecommendedcharts.push(this._charts[i]);
-        }
-    }
-
-}
 
  _recommendCharts(attributesHistory, callback) {
         if (attributesHistory == null) {
@@ -226,6 +181,7 @@ _collectAllRecommendedCharts() {
                 data: JSON.stringify(JsonRequest),
                 contentType: 'application/json'
             }).done((data) => {
+                // console.log(data)
                 this._charts = [];
                 this._baselinecharts = [];
                 this._performanceData = data['distribution_map'];
@@ -289,7 +245,4 @@ _collectAllRecommendedCharts() {
             makeRecommendationRequest();
         }
     }
-
-
-
-    }
+}

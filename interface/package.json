@@ -8,7 +8,7 @@
     "build:prod": "webpack --mode=production",
     "watch": "webpack --watch",
     "start": "nodemon server/server.js",
-    "start:prod": "NODE_ENV=prod node server/server.js"
+    "start:prod": "node server/server.js"
   },
   "author": "Sanad Saha <sahasa@oregonstate.edu>",
   "license": "GNU",
@@ -27,6 +27,7 @@
     "sass-loader": "^13.2.0",
     "style-loader": "~3.3.1",
     "webpack": "^5.75.0",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.0.0",
     "webpack-dev-middleware": "^7.2.1",
     "webpack-dev-server": "^5.0.4"
@@ -41,8 +42,8 @@
     "method-override": "^3.0.0",
     "nodemon": "^2.0.3",
     "vega": "^5.29.0",
+    "vega-embed": "^6.22.1",
     "vega-lite": "^5.18.1",
-    "vega-tooltip": "^0.34.0",
-    "vega-embed": "^6.22.1"
+    "vega-tooltip": "^0.34.0"
   }
 }

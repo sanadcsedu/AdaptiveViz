@@ -1,42 +1,33 @@
-/*************************************************************************
- * Copyright (c) 2018 Jian Zhao
- *
- *************************************************************************
- *
- * @author
- * Jian Zhao <zhao@fxpal.com>
- *
- *************************************************************************/
-
-// style
 import './assets/scss/app.scss'
 
-// global libs
-var d3 = require('d3')
-window.d3 = d3
-var _ = require('lodash');
-window._ = _
+import {parseurl} from './utils.js'
 
-import { parseurl, updateData} from './utils.js'
+var datafile = '/data/birdstrikes_lowercase.json'
 
-// app instance
 var app = {}
 app.logger = []
 window.app = app
 
-var datafile = '/data/birdstrikes.json'
-// var datafile = 'data/movies_cleaned.json'
-
-$(document).ready(function() {
-    var parameters = parseurl()
-    if(parameters['data']) 
-        datafile = parameters.data
+$(document).ready(async function() {
     
-    // get and visualize data
-    $.get(datafile).done((d) => {
-        updateData(d, datafile)
+    var parameters = parseurl();
+
+    if (parameters['data'])
+        datafile = parameters.data;
+
+    import('./createTaskForm.js').then(module => {
+      module.createTaskForm();
     })
-})
 
+    const data = await $.get(datafile);  
+    const dataTableModule = await import('./DataTable.js');
+    await dataTableModule.updateData(data, datafile);
 
+    const chartsModule = await import('./displayAllCharts.js');
+    chartsModule.displayAllCharts('#allchartsview', true);
 
+    const eventsModule = await import('./handleEvents.js');
+    eventsModule.handleEvents();
+
+  }    
+);

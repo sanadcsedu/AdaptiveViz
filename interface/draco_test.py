@@ -300,13 +300,12 @@ def get_draco_recommendations(attributes, datasetname='birdstrikes', config=None
         dataset_schema = load_dataset(data_schema_file_path)
         #for all reco's add the dataset schema
         for key in reco:
-            reco[key]['data']['name'] = "data-722b4bfc7f88aef30ebf554c12f5320c"
-            reco[key]['datasets'] = dataset_schema
+            # reco[key]['data']['name'] = "data-722b4bfc7f88aef30ebf554c12f5320c"
+            # reco[key]['datasets'] = dataset_schema
             reco[key]=json.dumps(reco[key])
         return reco
 
     else:
-
         recommendations = start_draco(fields=field_names_final, datasetname=datasetname, config=config, color=color)
         if len(recommendations) == 0:
             print('Draco recommendations are empty, retrying with one less field')

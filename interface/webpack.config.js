@@ -3,19 +3,28 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 module.exports = {
   mode: 'development', // or 'production'
   context: path.resolve(__dirname, 'client'),
 
   entry: {
-    app1: './app1.js'
+    app1: './app1.js',
+    ShiftFocus: './CreateShiftFocus.js'
   },
 
   output: {
     path: path.resolve(__dirname, 'public'),
     filename: './assets/js/[name].bundle.js'
   },
+  
+  optimization: {
+    usedExports: true, 
+    splitChunks: {
+          chunks: 'all'
+        }
+    },
 
   module: {
     rules: [
@@ -91,6 +100,11 @@ module.exports = {
     }),
     new MiniCssExtractPlugin({
       filename: './assets/css/app.css' // Output for CSS file
+    }),
+    new BundleAnalyzerPlugin({
+      analyzerMode: 'disabled', // 'static' Generates a static HTML file
+      reportFilename: 'bundle-report.html', // Output file name
+      openAnalyzer: true, // Automatically open the report in the default browser
     }),
     new CopyWebpackPlugin({
       patterns: [

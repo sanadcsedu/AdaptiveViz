@@ -1,20 +1,10 @@
-/*************************************************************************
- * Copyright (c) 2018 Jian Zhao
- *
- *************************************************************************
- *
- * @author
- * Jian Zhao <zhao@fxpal.com>
- *
- *************************************************************************/
 
  import { EventEmitter } from "events"
 
- import ace from 'ace-builds/src-noconflict/ace'
- import 'ace-builds/webpack-resolver'
- import vegaEmbed from 'vega-embed'
- import { storeInteractionLogs, createTaskForm } from "./utils.js"
- 
+ import { storeInteractionLogs } from "./StoreLogs.js"
+//  import { createTaskForm } from "./utils.js"
+ import {cloneDeep, extend} from 'lodash'
+
  export default class ChartView extends EventEmitter {
      constructor(data, conf) {
          super()
@@ -33,18 +23,24 @@
  
      _init() {
         // text editor
-         this._cheditor = ace.edit('editorcontainer', {
-             mode: 'ace/mode/json',
-             minLines: 20,
+        import('ace-builds/src-noconflict/ace')
+        .then(ace => {
+            return import('ace-builds/webpack-resolver').then(() => ace);
+        })
+        .then(ace => {
+            this._cheditor = ace.edit('editorcontainer', {
+                mode: 'ace/mode/json',
+                minLines: 20,
                 maxLines: 35,
                 wrap: true,
                 autoScrollEditorIntoView: true,
                 highlightActiveLine: true,
                 showPrintMargin: true,
                 showGutter: false,
-         })
+            });
+        })
 
-         createTaskForm();
+        //  createTaskForm();
          // ui controls
          var html = ''
  
@@ -77,13 +73,14 @@
          })
  
          // buttons
-         $('#add').click((e) => {
+        //  pressing the recommend button, what will happen? goes to handlevents -> similar
+         $('#recommend').click((e) => {
              this.update(this._cheditor.session.getValue(), 'texteditor')
              this.emit('similar', this.data)
          })
-  
+        //  Pressing the update button, where user sets the fields herself.
          $('#preview1').click((e) => {
-             var data = _.cloneDeep(this.data)
+             var data = cloneDeep(this.data)
              data['mark'] = $('#ch-mark').val()
  
              if(!data['encoding'])
@@ -133,26 +130,9 @@
 
         //#######################################################################################################################
 
-        // Automatically generate similar charts
-        this.emit('similar', this.data, fieldsArray); // Automatically generate similar charts
+        this.emit('similar', this.data, fieldsArray); // Generate charts according to users input
     });
 
-
-         })
-
-
- 
-         $('#preview2').click((e) => {
-             var data = this._cheditor.session.getValue()
-
-             this._validateChart(data, () => {this.update(data, 'texteditor')})            
-         })
-     
-         $('#cancel1, #cancel2').click((e) => {
-             if(app.sumview.selectedChartID >= 0) {
-                 var ch = app.sumview.charts[app.sumview.selectedChartID]
-                 this.update(ch.originalspec, 'outside')
-             }
          })
      }
      
@@ -186,32 +166,36 @@ update(data_all, eventsource) {
     var chartViewWidth = chartViewElement.clientWidth;
     var chartViewHeight = chartViewElement.clientHeight;
 
-    var vegachart = _.extend({}, this.data, {
-        width: chartViewWidth*0.95 ,
-        height: chartViewHeight*0.95 ,
+    var vegachart = extend({}, this.data, {
+        width: chartViewWidth*0.90 ,
+        height: chartViewHeight*0.90 ,
+        datasets: { "data-2ad45d7d002e5134c7eb6f8a0ec71df4": app.data.chartdata.values},
         autosize: { type: 'fit', resize: true },
         config: this.conf.vegaconfig
     });
 
-    vegaEmbed('#chartview .chartcontainer', vegachart, { actions: false })
-        .then((result) => {
-            // Access the Vega view instance
-            var view = result.view;
-            var spec = result.spec; // Capture the spec here
+    import('vega-embed')
+        .then(({ default: vegaEmbed }) => {
+            vegaEmbed('#chartview .chartcontainer', vegachart, { actions: true })
+                .then((result) => {
+                    // Access the Vega view instance
+                    var view = result.view;
+                    var spec = result.spec; // Capture the spec here
 
-            // Add hover event listeners to the view
-            view.addEventListener('mousemove', (event, item) => {
-                if (item && item.datum) {
-                    storeInteractionLogs('hover on main chart', {
-                        encoding: spec.encoding,
-                        mark: spec.mark,
-                        fields: item.datum
-                    }, new Date());
-                }
-            });
+                    // Add hover event listeners to the view
+                    view.addEventListener('mousemove', (event, item) => {
+                        if (item && item.datum) {
+                            storeInteractionLogs('hover on main chart', {
+                                encoding: spec.encoding,
+                                mark: spec.mark,
+                                fields: item.datum
+                            }, new Date());
+                        }
+                    });
 
-        })
-        .catch(console.error);
+                })
+                .catch(console.error);
+            })
 
     if (eventsource != 'texteditor')
         this._cheditor.session.setValue(JSON.stringify(this.data, null, '  '));
