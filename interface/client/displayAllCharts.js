@@ -25,7 +25,7 @@ export function displayAllCharts(container, created = true) {
         $chartContainer.append('<div class="chartcontainer"></div>');
 
         vegaEmbed('#chart' + ch.chid + ' .chartcontainer', vegachart, {
-            actions: true
+            actions: false
         });
 
         $chartContainer.hover((e) => {

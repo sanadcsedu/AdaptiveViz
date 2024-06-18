@@ -11,9 +11,9 @@ from performance import OnlineLearningSystem
 import concurrent.futures
 import pickle
 import os
+import get_specs
 
 port = 5500
-MAX_LEN = 20
 app = Flask(__name__, static_folder='web/static',
             template_folder='web/templates')
 CORS(app)
@@ -22,9 +22,10 @@ app.secret_key = 'your_secret_key'
 
 env = environment()
 system = OnlineLearningSystem()
+precomputed_vis = get_specs.get_specs()
 
 manual_session = {}
-MAX_LEN = 3
+
 class InvalidUsage(Exception):
     status_code = 400
 
@@ -65,14 +66,10 @@ def encode():
             if field_name:
                 field_names.append(field_name)
                 field_types[field_name] = key
-    if len(field_names) > MAX_LEN:
-        raise InvalidUsage('Too many fields selected. Please select <4 fields.', status_code=400)
-
-    # if elements in field_names are not unique, raise an error
-    if len(field_names) != len(set(field_names)):
-        raise InvalidUsage('Duplicate fields selected. Please select unique fields.', status_code=400)
-
-    recommendations = draco_test.get_draco_recommendations(field_names, 'birdstrikes', parsed_data, color=True)
+    system.response_history.append(field_names)
+    system.update_models()
+    # Here we use draco to generate visualization based on users specs
+    recommendations = draco_test.get_draco_recommendations(field_names, 'birdstrikes', parsed_data)
     chart_recom = system.remove_irrelevant_recommendations(field_names, recommendations)
     return jsonify(chart_recom[0])
 
@@ -101,14 +98,20 @@ def encode2():
         field_name = field_info.get('field')
         if field_name:
             field_names.append(field_name)
+
     system.response_history.append(field_names)
     system.update_models()
 
+    # Write to a log file the selected recommendation for current session
+    with open('performance-data/selected_recommendation.txt', 'a') as f:
+        # Write field names and time
+        time = datetime.datetime.now()
+        f.write(f'{field_names} {time}\n')
     return jsonify(specs)
 
 def recommendation_generation(attributes):
-    recommendations = draco_test.get_draco_recommendations(attributes,color=True)
-    chart_recom = system.remove_irrelevant_recommendations(attributes, recommendations, max_constrained=False)
+    # chart_recom = draco_test.get_draco_recommendations(attributes)
+    chart_recom = precomputed_vis.get_draco_recommendations(attributes, datasetname='birdstrikes')
     return chart_recom
 
 @app.route('/top_k', methods=['POST'])
@@ -127,65 +130,31 @@ def top_k(save_csv=False):
     else:
         system.state_history = [['flight_date', 'wildlife_size', 'airport_name']]
 
-    print('State History:', system.state_history)
-
     attributes_list, distribution_map, baselines_distribution_maps, attributes_baseline = system.onlinelearning(algorithms_to_run=['Hotspot', 'Modified-Hotspot', 'ShiftScope'],specified_algorithm=specified_algorithm, specified_baseline=specified_baseline,bookmarked_charts=bookmarked_charts)
 
+    # Use a list to preserve order
     chart_recom_list = []
-    # Use a list to preserve order
-    ########### data type ############
-    data_types = {
-        "aircraft_airline_operator": "nominal",
-        "aircraft_make_model": "nominal",
-        "airport_name": "nominal",
-        "cost_other": "quantitative",
-        "cost_repair": "quantitative",
-        "cost_total_a": "quantitative",
-        "effect_amount_of_damage": "nominal",
-        "flight_date": "temporal",
-        "origin_state": "nominal",
-        "speed_ias_in_knots": "quantitative",
-        "when_phase_of_flight": "nominal",
-        "when_time_of_day": "nominal",
-        "wildlife_size": "nominal",
-        "wildlife_species": "nominal",
-    }
-    ###################################
-
-    # Use a list to preserve order
-    future_to_attributes = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
-        for attributes in attributes_list:
-            future = executor.submit(recommendation_generation, attributes)
-            future_to_attributes.append((future, attributes))
+        future_to_attributes = {executor.submit(recommendation_generation, attributes): attributes for attributes in attributes_list}
+    for future in concurrent.futures.as_completed(future_to_attributes):
+        shiftscope_recommendations = future.result()
+        chart_recom_list.extend([shiftscope_recommendations])
 
-        for future, attributes in future_to_attributes:
-            chart_recom = future.result()
-            for x in chart_recom:
-                spec = json.loads(x)
-                for channel, encoding in spec["encoding"].items():
-                    # if "color" in channel:
-                    field_name = encoding.get("field")
-                    if field_name == None:
-                        continue
-                    # print(field_name)
-                    encoding["type"] = data_types[field_name]                
-                
-                chart_recom_list.append([json.dumps(spec)])  # Append the modified spec back to the list
+    # print(chart_recom_list) 
 
     baseline_chart_recom = []
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
         future_to_attributes = {executor.submit(recommendation_generation, attributes): attributes for attributes in attributes_baseline}
-        for future in concurrent.futures.as_completed(future_to_attributes):
-            baseline_recommendations = future.result()
-            baseline_chart_recom.extend(baseline_recommendations)
+    for future in concurrent.futures.as_completed(future_to_attributes):
+        baseline_recommendations = future.result()
+        baseline_chart_recom.extend([baseline_recommendations])
 
     response_data = {
         "chart_recommendations": chart_recom_list,
         "distribution_map": distribution_map,
         "baseline_chart_recommendations": baseline_chart_recom,
     }
-
+    # print(response_data)
     for algo, base_distribution_map in baselines_distribution_maps.items():
         with open(f'performance-data/{algo}_distribution_map.json', 'w') as f:
             json.dump(base_distribution_map, f)
@@ -197,7 +166,7 @@ def top_k(save_csv=False):
         distribution_map_dataframe = pd.DataFrame.from_dict(distribution_map, orient='index', columns=['Probability'])
         distribution_map_dataframe.index.name = 'Fields'
         pd.DataFrame.to_csv(distribution_map_dataframe, 'performance-data/distribution_map.csv')
-
+    # print("sending data")
     return jsonify(response_data)
 
 @app.route('/')
@@ -220,7 +189,6 @@ def index():
     env = environment()
 
     return response
-
 
 @app.route('/submit-form', methods=['POST'])
 def submit_form():
@@ -263,6 +231,7 @@ def submit_form():
     env=environment()
 
 
+
     return jsonify({'message': 'Form submitted successfully. New session started.'})
 
 
@@ -275,4 +244,4 @@ def clean_chart_logs(chartList):
     return trimmed_chartdata
 
 if __name__ == '__main__':
-    app.run(port=5500, debug=False)
+    app.run(host='0.0.0.0', port=5500, debug=True)

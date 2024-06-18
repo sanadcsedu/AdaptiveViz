@@ -173,6 +173,7 @@ update(data_all, eventsource) {
         autosize: { type: 'fit', resize: true },
         config: this.conf.vegaconfig
     });
+    vegachart.mark.tooltip = true;
 
     import('vega-embed')
         .then(({ default: vegaEmbed }) => {

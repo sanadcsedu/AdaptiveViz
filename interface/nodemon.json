@@ -1,0 +1,3 @@
+{
+    "ignore": ["./interactions/", "./node_modules/", "./public/", "./__pycache__/"]
+  }

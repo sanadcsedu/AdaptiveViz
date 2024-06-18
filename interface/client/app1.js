@@ -2,11 +2,12 @@ import './assets/scss/app.scss'
 
 import {parseurl} from './utils.js'
 
-var datafile = '/data/birdstrikes_lowercase.json'
+var datafile = '/data/birdstrikes_lowercase_2000.json'
 
 var app = {}
 app.logger = []
 window.app = app
+
 
 $(document).ready(async function() {
     
